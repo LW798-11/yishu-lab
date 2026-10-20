@@ -128,4 +128,32 @@ for n in range(64):
 assert len(reached) == 64
 assert [k_count[k] for k in range(7)] == [1, 6, 15, 20, 15, 6, 1]  # C(6,k)
 
+# ---------------------------------------------------------------
+# 6. 爻辞数据库的完整性（lineData.ts）
+#    64 卦齐全；每卦恰 6 条爻辞原文 + 6 条双语核心画面 + 1 条卦象画面
+# ---------------------------------------------------------------
+import os
+import re
+
+here = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(here, "lineData.ts"), encoding="utf-8") as f:
+    text = f.read()
+
+names = re.findall(r"^  '([^']+)': \{", text, re.M)
+assert len(names) == 64 and len(set(names)) == 64, (len(names), len(set(names)))
+
+blocks = re.split(r"^  '[^']+': \{", text, flags=re.M)[1:]
+assert len(blocks) == 64
+for name, blk in zip(names, blocks):
+    lines = re.search(r"lines: \[(.*?)\]", blk, re.S).group(1)
+    n_lines = len(re.findall(r"'[^']*'", lines))
+    n_gloss = len(re.findall(r"\{ zh: '.*?', en: (?:\".*?\"|'.*?') \}", blk)) - 1  # 减卦象画面
+    assert n_lines == 6, (name, n_lines)
+    assert n_gloss == 6, (name, n_gloss)
+    # 爻名前缀齐全：初/上 + 九二·六二…九五·六五
+    assert re.search(r"'初[九六]：", lines), name
+    assert re.search(r"'上[九六]：", lines), name
+    for pos in ("二", "三", "四", "五"):
+        assert re.search(rf"'[九六]{pos}：", lines), (name, pos)
+
 print("all checks passed")
