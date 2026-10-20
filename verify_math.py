@@ -106,25 +106,26 @@ assert xiantian(value(KUN, GEN)) == 56      # 山地剥
 assert xiantian(value(KUN, KUN)) == 64      # 坤为地
 
 # ---------------------------------------------------------------
-# 5. 数字取模起卦（梅花易数式约定）的自洽性
-#    N mod 8 定上卦、⌊N/8⌋ mod 8 定下卦（余 0 记 8）、N mod 6 定动爻（余 0 记第 6 爻）
+# 5. 数字取模起卦的自洽性
+#    N mod 8 定上卦、⌊N/8⌋ mod 8 定下卦（余 0 记 8）、
+#    N mod 64 的 6 个比特定动爻位掩码（0–6 个动爻，掩码在 0..63 上均匀）
 # ---------------------------------------------------------------
 NUM = {1: QIAN, 2: DUI, 3: LI, 4: ZHEN, 5: XUN, 6: KAN, 7: GEN, 8: KUN}
 
 def cast_number(n):
     upper = NUM[((n % 8) + 8) % 8 or 8]
     lower = NUM[((n // 8 % 8) + 8) % 8 or 8]
-    moving = ((n % 6) + 6) % 6 or 6       # 1..6
-    return upper, lower, moving
+    mask = ((n % 64) + 64) % 64             # 第 i 位为 1 → 第 i 爻动
+    return upper, lower, mask
 
-# 64 个卦都应能被某个 N 取到，且动爻分布均匀（每个位置 1/6）
+# 64 个卦都应能被某个 N 取到；动爻个数在 0..6 上呈二项分布 C(6,k)
 reached = set()
-moving_count = Counter()
-for n in range(1, 64 * 6 + 1):
-    u, l, m = cast_number(n)
+k_count = Counter()
+for n in range(64):
+    u, l, mask = cast_number(n)
     reached.add(value(u, l))
-    moving_count[m] += 1
+    k_count[bin(mask).count('1')] += 1
 assert len(reached) == 64
-assert len(set(moving_count.values())) == 1
+assert [k_count[k] for k in range(7)] == [1, 6, 15, 20, 15, 6, 1]  # C(6,k)
 
 print("all checks passed")
